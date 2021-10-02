@@ -1,11 +1,11 @@
 # Multi-agent-exploration-2D
-Multi agent exploration on unknown maps using Reinforcement Learning.
+                                      Multi agent exploration on unknown maps using Reinforcement Learning.
 
 
 
 
 
-Abstract
+
 
 
 Modern mobile robots have begun to be used in many exploration and exploration and rescue applications. They are essentially coordinated by human operators and work with inspection or rescue teams. Over time, robots (agents) have become more sophisticated and we see more autonomy in more complex environments.
