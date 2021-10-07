@@ -1,5 +1,5 @@
 # Multi-agent-exploration-2D
-                                      Multi agent exploration with Reinforcement Learning.
+                                  Multi agent exploration with Reinforcement Learning.
 
 
 
