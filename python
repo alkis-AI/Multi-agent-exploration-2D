@@ -30,23 +30,12 @@ MIN_EPSILON_STEADY=0.01
 MIN_BETA = 0.4
 MAX_BETA = 1.0
 HUBER_LOSS_DELTA = 1.0
-render=1
-recorder=1
+
 test=0
 expl_finished=1
-WIDTH = 60
-HEIGHT = 60
-mem_model = 'PER'
-# This sets the margin between each cell
-MARGIN = 1
 
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-BLUE = (0, 0, 255)
-GRAY = (128, 128, 128)
-ORANGE = (255, 128, 0)
+mem_model = 'PER'
+
 grid_size=50
 UP = 0
 DOWN = 1
@@ -1101,7 +1090,7 @@ if __name__ =="__main__":
     env.run(all_agents)
     print("--- %s seconds ---" % (time.time() - start_time))
 
-#(self, state_size, action_size, bee_index,learning_rate, brain_name,memory):
+
 
 
  
