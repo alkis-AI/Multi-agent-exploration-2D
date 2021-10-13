@@ -32,8 +32,8 @@ MAX_BETA = 1.0
 HUBER_LOSS_DELTA = 1.0
 render=1
 recorder=1
-test=1
-expl_finished=0
+test=0
+expl_finished=1
 WIDTH = 60
 HEIGHT = 60
 mem_model = 'PER'
@@ -55,8 +55,8 @@ RIGHT = 3
 STAY = 4
 A = [UP, DOWN, LEFT, RIGHT, STAY]
 A_DIFF = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
-agents_number=2
-number_of_walls=2*grid_size
+agents_number=4
+number_of_walls=grid_size+1
 depth=3
 DIMENSIONS=2
 
@@ -66,7 +66,7 @@ def  ConnectButton():
 
 def localization(pos,array_map):    
     locality_map=np.zeros([agents_number,3,3])
-    array=np.zeros([agents_number,DIMENSIONS*agents_number+9])
+    array=np.zeros([agents_number,DIMENSIONS*2+9])
     #print("initial",locality_map) 
     #print("pos",pos)
     counter=-1
@@ -180,9 +180,18 @@ def localization(pos,array_map):
     #temp2=pos.flatten()
     #state=np.append(temp,temp2)
     #state=locality_map
+    
     for i in range(0,agents_number):
-        array[i]=np.append(locality_map[i].flatten(),pos)
-        #print("locality_map!!!!",locality_map[i])
+        temp=[]
+        if(i!=agents_number-1):
+            temp.append(pos[i])
+            temp.append(pos[i+1])
+        else:
+            temp.append(pos[i])
+            temp.append(pos[0])
+        #print("temp",temp)
+        array[i]=np.append(locality_map[i].flatten(),temp)
+        #print("locality_map!!!!",array[i])
     #print("array",array)
     state=array
     #print("loc_state",state)
@@ -364,7 +373,10 @@ class Brain(object):
         y1 = Dense(self.num_nodes, activation='relu')(x)
         y2 = Dense(self.num_nodes, activation='relu')(y1)
         y3 = Dense(self.num_nodes, activation='relu')(y2)
-        z = Dense(self.action_size, activation="linear")(y3)
+        y4 = Dense(self.num_nodes, activation='relu')(y3)
+        y5 = Dense(self.num_nodes, activation='relu')(y4)
+        y6 = Dense(self.num_nodes, activation='relu')(y5)
+        z = Dense(self.action_size, activation="linear")(y6)
         model = Model(inputs=x, outputs=z)
 
        # optimizer = Adam(lr=self.learning_rate, clipnorm=1.)
@@ -384,7 +396,7 @@ class Brain(object):
             print("load!")
           
             model.load_weights('./drive/MyDrive/diplwmatikh/local_state_20x20.h5')
-         #   model.load_weights('./drive/MyDrive/diplwmatikh/local_state_50x50.h5')
+            model.load_weights('./drive/MyDrive/diplwmatikh/local_state_20x20.h5')
             #for layer in model.layers: print(layer.get_config(), layer.get_weights())
    
         return model
@@ -424,7 +436,7 @@ class Brain(object):
         return self.predict(state.reshape(1,self.state_size), target=target).flatten()
 
     def save_model(self):
-        self.model.save_weights('./drive/MyDrive/diplwmatikh/local_state_50x50.h5')
+        self.model.save_weights('./drive/MyDrive/diplwmatikh/test_new')
         #print("save!")
         
 
@@ -523,13 +535,15 @@ class Agent(object):
             a = o[1][self.bee_index]
             r = o[2]
             s_ = o[3]
-            #done = o[4]
+            done = o[4]
 
             t = p[i]
             old_value = t[a]
-            
+            if done:
+                t[a] = r
+            else:
                
-            t[a] = r + self.gamma * pTarget_[i][np.argmax(p_[i])]
+                t[a] = r + self.gamma * pTarget_[i][np.argmax(p_[i])]
                
 
             x[i] = s
@@ -557,12 +571,14 @@ class Agent(object):
             a = o[1][self.bee_index]
             r = o[2]
             s_ = o[3]
-            #done = o[4]
+            done = o[4]
 
             t = p[i]
             old_value = t[a]
-         
-            t[a] = r + self.gamma * pTarget_[i][np.argmax(p_[i])]
+            if done:
+                t[a] = r
+            else:
+                t[a] = r + self.gamma * pTarget_[i][np.argmax(p_[i])]
 
             x[i] = s
             y[i] = t
@@ -642,7 +658,7 @@ class agentslandmarks:
         self.terminal = False
         self.local=np.zeros([agents_number,3,3])
         self.test_test=5
-        self.state_size=9+DIMENSIONS*agents_number
+        self.state_size=9+DIMENSIONS*2
         #self.local_state=np.zeros(self.state_size)
         self.empty_spaces=int(abs(np.sum(self.wall_check))) 
         print("state size",self.state_size)
@@ -682,7 +698,6 @@ class agentslandmarks:
     def step(self, agents_actions,current_step):
         counter=0
         counter2=0
-        counter_visited=0
         self.terminal=False
         # update the position of agents
         self.agents_positions,counter_wall = self.update_positions(self.agents_positions, agents_actions)
@@ -691,12 +706,10 @@ class agentslandmarks:
             
             if(self.array_map[i]==-1 and self.wall_check[i]==-1):
                 counter2=counter2+1
-                self.array_map[i]=0
-            elif self.array_map[i]==0:
-                counter_visited=counter_visited+1
+            self.array_map[i]=0
      
         self.local_state=localization(self.agents_positions,self.array_map)
-        reward= 2* counter2-counter_wall*100-1
+        reward= 5* counter2-counter_wall*10-1
         
 
         #new_state = list(sum(self.landmarks_positions + self.agents_positions, ()))
@@ -709,7 +722,7 @@ class agentslandmarks:
        # if(current_step>=74):
             #print("np.sum:",np.sum(self.array_map))
           
-        return [new_state, reward, counter_visited,counter_wall,np.sum(self.array_map)]
+        return [new_state, reward, self.terminal,counter_wall,np.sum(self.array_map)]
 
     def update_positions(self,agents_pos,actions):
         counter=0
@@ -823,7 +836,6 @@ class Environment(object):
         test2=1
         counter_max=0
         counter_neg=0
-        available=grid_size*grid_size-self.number_of_walls_t1-agents_number
         counter_positive=0
         for episode_num in xrange(self.episodes_number):
             flag=0
@@ -839,8 +851,7 @@ class Environment(object):
             reward_all = 0
             time_step = 0
             
-            sum_wall=0   
-            sum_counter_already=0 
+                
             while not done and time_step < self.max_ts:
 
                 # if self.render:
@@ -851,9 +862,7 @@ class Environment(object):
                     #state_temp=locality_map
                     actions.append(agent.greedy_actor(state[counterx]))
                     counterx=counterx+1
-                next_state, reward, counter_visited,wall_counter,sum_finale = self.env.step(actions,time_step)\
-
-                sum_counter_already=sum_counter_already+ counter_already
+                next_state, reward, done,wall_counter,sum_finale = self.env.step(actions,time_step)
                 
                 #print("actions",actions)
                 
@@ -863,9 +872,7 @@ class Environment(object):
                 counterx=0
                 for agent in agents:
                         
-                    agent.observe((state[counterx], actions[counterx], reward, next_state[counterx], done))
-                    sum_wall=sum_wall+wall_counter
-
+                    agent.observe((state[counterx], actions, reward, next_state[counterx], done))
                     #print("state",state[counterx])
                     if total_step >= self.filling_steps:
                         agent.decay_epsilon()
@@ -879,22 +886,11 @@ class Environment(object):
                 reward_all += reward
                 #if(reward_all>0):
                     #flag=1
-            if(sum_finale>=0):
-                undiscovered=self.number_of_walls_t1-sum_finale
-                print("positive sum_finale")
-            else:
-                undiscovered=abs(sum_finale)+self.number_of_walls_t1
-            #    print("negative sum_finale")
-            temp=(available/(available-undiscovered))
-           # print("undiscovered",undiscovered)
-            #print("available",available)
-            #print("no of walls",self.number_of_walls_t1)
-            #print("temp",temp)
-            coverage=100/temp       #agent.replay(flag)
-            if( coverage>=50 and coverage <70 and sum_wall<=5):
+                    #agent.replay(flag)
+            if(reward_all>0 and reward_all<self.max and episode_num!=0):
                 flag=1
                 agent.replay(flag)
-            elif( coverage>=70  and sum_wall<=5):
+            elif(reward_all>0 and reward_all>=self.max and episode_num!=0):
                 flag=2
                 agent.replay(flag)
             else:
@@ -925,7 +921,7 @@ class Environment(object):
                         max_score = reward_all
                             #print("max score",max_score)
                            # print("rewards_all",reward_all)
-            if episode_num % 100==0:
+            if episode_num % 1000==0:
                 print("max_score {m}, Best Episode: {e} , Best Final Step: {t} ".format(m=self.max,e=self.pos,t=self.maxt))
                 print(" number of negative rewards {n},number of positive: {u}:".format(n=counter_neg,u=counter_positive))
                                                                                         
@@ -959,8 +955,7 @@ class Environment(object):
             reward_all = 0
             time_step = 0
             
-            sum_wall=0
-            sum_counter_already=0    
+            sum_wall=0    
             while not done and time_step < self.max_ts:
                 # if self.render:
                 #     self.env.render()
@@ -972,9 +967,6 @@ class Environment(object):
                 #actions[1]=4
                 next_state, reward, done,wall_counter,sum_finale = self.env.step(actions,time_step)
                 sum_wall=sum_wall+wall_counter
-                sum_counter_already=sum_counter_already+ counter_already
-
-
                 #print("actions",actions)
                 #print(actions[0])
                 #print(actions[1])
@@ -1027,7 +1019,7 @@ class Environment(object):
 
             
             print("wall hit total {w}, for episode :{e}".format(w=sum_wall,e=episode_num))
-            if episode_num % 10==0:
+            if episode_num % 1==0:
                 print("max_score {m}, Best Episode: {e} , Best Final Step: {t} ".format(m=self.max,e=self.pos,t=self.maxt))
                 print(" number of negative rewards {n},number of positive: {u}:".format(n=counter_neg,u=counter_positive)) 
                                                                                                
@@ -1090,8 +1082,8 @@ if __name__ =="__main__":
     else:
         print("Please install GPU version of TF")
 
-    lr=0.00005
-    env=Environment(episodes_number=10000,episodes_testing=10,render=1,recorder=1,max_timestep=1500,test=test,replay_steps=4,
+    lr=0.000005
+    env=Environment(episodes_number=100000,episodes_testing=10,render=1,recorder=1,max_timestep=1000,test=test,replay_steps=16,
                     max_random_moves=0,agents_number=2,num_landmarks=3,grid_size=50)
     
     
@@ -1101,7 +1093,7 @@ if __name__ =="__main__":
     for b_idx in xrange(env.num_agents):
        # brain_file = get_name_brain(args, b_idx)
         all_agents.append(Agent(state_size=state_sizee, action_size=action_space, bee_index=b_idx, learning_rate=lr,
-                                target_frequency=4000,memory_capacity=100000,prioritization_scale=0.5,maximum_exploration=1000,batch_size=64))
+                                target_frequency=10000,memory_capacity=100000,prioritization_scale=0.8,maximum_exploration=25000,batch_size=64))
         
     #rewards_file = get_name_rewards(args)
     #timesteps_file = get_name_timesteps(args)
